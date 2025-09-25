@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Tic‑Tac‑Toe — Two Player | Tailwind + JS</title>
+    <!-- Tailwind CDN for quick prototyping -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* small extra styles for animations and focus */
+        .cell {
+            transition: background-color 160ms, transform 120ms;
+        }
+
+        .cell:active {
+            transform: scale(0.98);
+        }
+
+        .win {
+            background-image: linear-gradient(90deg, rgba(99, 102, 241, 0.12), rgba(236, 72, 153, 0.08));
+        }
+    </style>
+</head>
+
+<body class="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+    <main class="w-full max-w-xl">
+        <header class="mb-6 text-center">
+            <h1 class="text-3xl font-extrabold text-gray-800">Tic‑Tac‑Toe</h1>
+            <p class="text-sm text-gray-600 mt-1">Two-player local game — take turns and try to win!</p>
+        </header>
+
+        <section class="bg-white shadow-md rounded-2xl p-6">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex gap-4 items-center">
+                    <div class="flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full bg-indigo-500 inline-block"></span>
+                        <span class="text-sm text-gray-700">Player X</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full bg-pink-500 inline-block"></span>
+                        <span class="text-sm text-gray-700">Player O</span>
+                    </div>
+                </div>
+
+                <div class="text-right">
+                    <div id="status" class="text-sm text-gray-700">Turn: <strong id="turn">X</strong></div>
+                    <div class="text-xs text-gray-500">Click a cell to play</div>
+                </div>
+            </div>
+
+            <!-- Board -->
+            <div id="board" class="grid grid-cols-3 gap-3 mb-4">
+                <!-- 9 cells - created by JS also, but keep fallback structure for accessibility -->
+                <button
+                    class="cell h-24 md:h-28 flex items-center justify-center rounded-lg border border-gray-200 text-3xl font-bold text-gray-800 focus:outline-none"
+                    data-index="0" aria-label="cell 1"></button>
+                <button
+                    class="cell h-24 md:h-28 flex items-center justify-center rounded-lg border border-gray-200 text-3xl font-bold text-gray-800 focus:outline-none"
+                    data-index="1" aria-label="cell 2"></button>
+                <button
+                    class="cell h-24 md:h-28 flex items-center justify-center rounded-lg border border-gray-200 text-3xl font-bold text-gray-800 focus:outline-none"
+                    data-index="2" aria-label="cell 3"></button>
+
+                <button
+                    class="cell h-24 md:h-28 flex items-center justify-center rounded-lg border border-gray-200 text-3xl font-bold text-gray-800 focus:outline-none"
+                    data-index="3" aria-label="cell 4"></button>
+                <button
+                    class="cell h-24 md:h-28 flex items-center justify-center rounded-lg border border-gray-200 text-3xl font-bold text-gray-800 focus:outline-none"
+                    data-index="4" aria-label="cell 5"></button>
+                <button
+                    class="cell h-24 md:h-28 flex items-center justify-center rounded-lg border border-gray-200 text-3xl font-bold text-gray-800 focus:outline-none"
+                    data-index="5" aria-label="cell 6"></button>
+
+                <button
+                    class="cell h-24 md:h-28 flex items-center justify-center rounded-lg border border-gray-200 text-3xl font-bold text-gray-800 focus:outline-none"
+                    data-index="6" aria-label="cell 7"></button>
+                <button
+                    class="cell h-24 md:h-28 flex items-center justify-center rounded-lg border border-gray-200 text-3xl font-bold text-gray-800 focus:outline-none"
+                    data-index="7" aria-label="cell 8"></button>
+                <button
+                    class="cell h-24 md:h-28 flex items-center justify-center rounded-lg border border-gray-200 text-3xl font-bold text-gray-800 focus:outline-none"
+                    data-index="8" aria-label="cell 9"></button>
+            </div>
+
+            <div class="flex items-center justify-between">
+                <div class="flex gap-3 items-center">
+                    <button id="restart"
+                        class="px-3 py-2 rounded-md bg-indigo-600 text-white text-sm hover:bg-indigo-700 focus:outline-none">Restart</button>
+                    <button id="resetScore"
+                        class="px-3 py-2 rounded-md bg-gray-100 text-gray-800 text-sm hover:bg-gray-200 focus:outline-none">Reset
+                        Score</button>
+                </div>
+
+                <div class="text-sm text-gray-600">
+                    Score — X: <strong id="scoreX">0</strong> · O: <strong id="scoreO">0</strong>
+                </div>
+            </div>
+
+            <hr class="my-4">
+        </section>
+
+        <footer class="mt-4 text-center text-xs text-gray-500">
+        </footer>
+    </main>
+
+    <script>
+        /*
+          Tic-Tac-Toe Game Logic (Vanilla JS)
+          - Two players (X and O) take turns
+          - Tracks board state, current turn, scores
+          - Highlights winning combination
+          - Well commented for learning
+        */
+
+        // Query elements
+        const boardEl = document.getElementById('board');
+        const statusTurn = document.getElementById('turn');
+        const statusMsg = document.getElementById('status');
+        const restartBtn = document.getElementById('restart');
+        const resetScoreBtn = document.getElementById('resetScore');
+        const scoreXEl = document.getElementById('scoreX');
+        const scoreOEl = document.getElementById('scoreO');
+
+        // Game state
+        let board = Array(9).fill(null); // null / 'X' / 'O'
+        let currentPlayer = 'X';
+        let running = true; // whether input is accepted
+        let score = { X: 0, O: 0 };
+
+        // Winning index combinations
+        const WIN_COMBOS = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
+            [0, 3, 6], [1, 4, 7], [2, 5, 8], // cols
+            [0, 4, 8], [2, 4, 6]           // diagonals
+        ];
+
+        //  event listeners on cells
+        function init() {
+            //  listeners to all .cell buttons
+            const cells = Array.from(boardEl.querySelectorAll('.cell'));
+            cells.forEach(cell => {
+                cell.addEventListener('click', onCellClick);
+                cell.addEventListener('keydown', (e) => {
+                    //  — Enter or Space to activate
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        cell.click();
+                    }
+                });
+            });
+
+            restartBtn.addEventListener('click', resetBoard);
+            resetScoreBtn.addEventListener('click', () => {
+                score = { X: 0, O: 0 };
+                updateScoreUI();
+                resetBoard();
+            });
+
+            render();
+        }
+
+        // Handle a cell click
+        function onCellClick(e) {
+            if (!running) return; // ignore clicks when game over
+
+            const button = e.currentTarget;
+            const index = Number(button.dataset.index);
+
+            // If cell taken, do nothing
+            if (board[index]) return;
+
+            // Place the mark
+            board[index] = currentPlayer;
+            button.textContent = currentPlayer;
+            button.classList.add(currentPlayer === 'X' ? 'text-indigo-600' : 'text-pink-600');
+
+            // Check win/draw
+            const winner = checkWinner();
+            if (winner) {
+                // highlight winning cells
+                highlightWin(winner.combo);
+                statusMsg.innerHTML = `<strong>Winner:</strong> ${winner.player}`;
+                score[winner.player] += 1;
+                updateScoreUI();
+                running = false;
+                return;
+            }
+
+            if (board.every(cell => cell !== null)) {
+                // draw
+                statusMsg.innerHTML = `<strong>Draw.</strong> No winner.`;
+                running = false;
+                return;
+            }
+
+            // switch player
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            statusTurn.textContent = currentPlayer;
+        }
+
+        // Check if there's a winner; returns {player, combo} or null
+        function checkWinner() {
+            for (const combo of WIN_COMBOS) {
+                const [a, b, c] = combo;
+                if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+                    return { player: board[a], combo };
+                }
+            }
+            return null;
+        }
+
+        // Highlight winning cells visually
+        function highlightWin(indices) {
+            indices.forEach(i => {
+                const cell = boardEl.querySelector(`[data-index=\"${i}\"]`);
+                if (cell) {
+                    cell.classList.add('win');
+                    cell.classList.add('ring-4');
+                    cell.classList.add('ring-offset-2');
+                    cell.classList.add('ring-indigo-200');
+                }
+            });
+        }
+
+        // Reset the board for a new round but keep score
+        function resetBoard() {
+            board = Array(9).fill(null);
+            running = true;
+            currentPlayer = 'X';
+            statusTurn.textContent = currentPlayer;
+            statusMsg.textContent = 'Turn:';
+
+            // Clear UI cells
+            const cells = Array.from(boardEl.querySelectorAll('.cell'));
+            cells.forEach(cell => {
+                cell.textContent = '';
+                cell.classList.remove('text-indigo-600', 'text-pink-600', 'win', 'ring-4', 'ring-offset-2', 'ring-indigo-200');
+            });
+        }
+
+        // Update score numbers in UI
+        function updateScoreUI() {
+            scoreXEl.textContent = score.X;
+            scoreOEl.textContent = score.O;
+        }
+
+        // Render helper (in case we later want to build board dynamically)
+        function render() {
+            // Keep UI consistent with state at start
+            updateScoreUI();
+            statusTurn.textContent = currentPlayer;
+        }
+
+        // Kick things off
+        init();
+
+        // Expose a simple console API for testers (useful while learning)
+        window.TicTacToe = {
+            getState: () => ({ board: [...board], currentPlayer, running, score }),
+            resetBoard, resetScore: () => { score = { X: 0, O: 0 }; updateScoreUI(); resetBoard(); }
+        };
+    </script>
+</body>
+
+</html>
